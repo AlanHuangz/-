@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>頭像版圈圈叉叉</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            text-align: center;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { color: #2c3e50; }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .upload-section { margin-bottom: 15px; text-align: left; }
+        .upload-section label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .preview-img {
+            width: 60px; height: 60px;
+            border-radius: 50%; object-fit: cover;
+            display: none; margin-top: 10px; border: 2px solid #ccc;
+        }
+        button {
+            background-color: #3498db; color: white;
+            border: none; padding: 10px 20px; font-size: 16px;
+            border-radius: 5px; cursor: pointer; width: 100%;
+            margin-top: 10px;
+        }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        button:hover:not(:disabled) { background-color: #2980b9; }
+        
+        /* 遊戲區塊設計 */
+        #game-area { display: none; }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            justify-content: center;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 100px; height: 100px;
+            background-color: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 0; /* 隱藏文字 */
+        }
+        .cell img {
+            width: 80%; height: 80%;
+            object-fit: cover; border-radius: 50%;
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+        #message { font-size: 20px; font-weight: bold; color: #e74c3c; margin: 15px 0; min-height: 24px;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>頭像版圈圈叉叉</h1>
+
+    <div id="setup-area">
+        <div class="upload-section">
+            <label>玩家一 (先手):</label>
+            <input type="file" id="p1-upload" accept="image/*">
+            <img id="p1-preview" class="preview-img" alt="玩家一預覽">
+        </div>
+        <div class="upload-section">
+            <label>玩家二 (後手):</label>
+            <input type="file" id="p2-upload" accept="image/*">
+            <img id="p2-preview" class="preview-img" alt="玩家二預覽">
+        </div>
+        <button id="start-btn" disabled>上傳完畢，開始遊戲！</button>
+    </div>
+
+    <div id="game-area">
+        <h2 id="turn-indicator">換玩家一</h2>
+        <div class="board" id="board">
+            </div>
+        <div id="message"></div>
+        <button id="restart-btn" style="display:none;">再玩一局</button>
+    </div>
+</div>
+
+<script>
+    let p1Img = null;
+    let p2Img = null;
+    let currentPlayer = 1;
+    let gameState = ["", "", "", "", "", "", "", "", ""];
+    let gameActive = true;
+
+    const winConditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫線
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // 直線
+        [0, 4, 8], [2, 4, 6]             // 斜線
+    ];
+
+    // 處理圖片上傳
+    function setupUpload(inputId, previewId, playerNum) {
+        document.getElementById(inputId).addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const url = event.target.result;
+                    const preview = document.getElementById(previewId);
+                    preview.src = url;
+                    preview.style.display = 'block';
+                    
+                    if (playerNum === 1) p1Img = url;
+                    if (playerNum === 2) p2Img = url;
+
+                    if (p1Img && p2Img) {
+                        document.getElementById('start-btn').disabled = false;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    setupUpload('p1-upload', 'p1-preview', 1);
+    setupUpload('p2-upload', 'p2-preview', 2);
+
+    // 開始遊戲
+    document.getElementById('start-btn').addEventListener('click', () => {
+        document.getElementById('setup-area').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        createBoard();
+    });
+
+    // 建立九宮格
+    function createBoard() {
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.index = i;
+            cell.addEventListener('click', handleCellClick);
+            board.appendChild(cell);
+        }
+    }
+
+    // 點擊格子邏輯
+    function handleCellClick(e) {
+        const cell = e.target.closest('.cell');
+        const index = cell.dataset.index;
+
+        if (gameState[index] !== "" || !gameActive) return;
+
+        // 記錄狀態並顯示頭像
+        gameState[index] = currentPlayer;
+        const img = document.createElement('img');
+        img.src = currentPlayer === 1 ? p1Img : p2Img;
+        cell.appendChild(img);
+
+        checkResult();
+    }
+
+    // 檢查勝負
+    function checkResult() {
+        let roundWon = false;
+        for (let i = 0; i < winConditions.length; i++) {
+            const [a, b, c] = winConditions[i];
+            if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+                roundWon = true;
+                break;
+            }
+        }
+
+        const messageEl = document.getElementById('message');
+        const turnEl = document.getElementById('turn-indicator');
+
+        if (roundWon) {
+            messageEl.innerText = `玩家 ${currentPlayer} 獲勝了！🎉`;
+            turnEl.innerText = "遊戲結束";
+            gameActive = false;
+            document.getElementById('restart-btn').style.display = 'block';
+            return;
+        }
+
+        if (!gameState.includes("")) {
+            messageEl.innerText = "平手！🤝";
+            turnEl.innerText = "遊戲結束";
+            gameActive = false;
+            document.getElementById('restart-btn').style.display = 'block';
+            return;
+        }
+
+        // 換人
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        turnEl.innerText = `換玩家 ${currentPlayer}`;
+    }
+
+    // 重新開始 (保留頭像)
+    document.getElementById('restart-btn').addEventListener('click', () => {
+        gameState = ["", "", "", "", "", "", "", "", ""];
+        gameActive = true;
+        currentPlayer = 1;
+        document.getElementById('message').innerText = '';
+        document.getElementById('turn-indicator').innerText = '換玩家一';
+        document.getElementById('restart-btn').style.display = 'none';
+        
+        document.querySelectorAll('.cell').forEach(cell => {
+            cell.innerHTML = '';
+        });
+    });
+</script>
+
+</body>
+</html>
