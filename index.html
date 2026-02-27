@@ -5,67 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>頭像版圈圈叉叉</title>
     <style>
+        /* --- 基礎樣式 --- */
         body {
-            font-family: "Microsoft JhengHei", sans-serif;
+            font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
             text-align: center;
-            background-color: #f9f9f9;
+            background-color: #f0f2f5;
             color: #333;
             margin: 0;
             padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
         }
-        h1 { color: #2c3e50; }
+        h1 { color: #2c3e50; margin-bottom: 20px;}
         .container {
-            max-width: 400px;
-            margin: 0 auto;
             background: white;
-            padding: 20px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        
+        /* --- 上傳區塊樣式 --- */
+        .upload-group {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .upload-card {
+            background: #f8f9fa;
+            padding: 15px;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 45%;
+            text-align: center;
+            border: 2px dashed #bdc3c7;
+            transition: all 0.3s ease;
         }
-        .upload-section { margin-bottom: 15px; text-align: left; }
-        .upload-section label { display: block; font-weight: bold; margin-bottom: 5px; }
-        .preview-img {
-            width: 60px; height: 60px;
-            border-radius: 50%; object-fit: cover;
-            display: none; margin-top: 10px; border: 2px solid #ccc;
+        .upload-card:hover { border-color: #3498db; background: #ecf6fc;}
+        .upload-label { font-weight: bold; display: block; margin-bottom: 10px; color: #7f8c8d;}
+        /* 隱藏原本醜醜的 input file */
+        input[type="file"] { display: none; }
+        .custom-file-upload {
+            border: 1px solid #ccc; color: #666;
+            display: inline-block; padding: 6px 12px;
+            cursor: pointer; border-radius: 5px; font-size: 14px;
+            background: white; margin-bottom: 10px;
         }
-        button {
+        .preview-img-box {
+             width: 80px; height: 80px; margin: 0 auto;
+             background: #ddd; border-radius: 50%;
+             display: flex; justify-content: center; align-items: center;
+             overflow: hidden; border: 3px solid #fff;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .placeholder-icon { font-size: 30px; color: #aaa;}
+
+        button#start-btn, button#restart-btn {
             background-color: #3498db; color: white;
-            border: none; padding: 10px 20px; font-size: 16px;
-            border-radius: 5px; cursor: pointer; width: 100%;
-            margin-top: 10px;
+            border: none; padding: 12px 20px; font-size: 18px; font-weight: bold;
+            border-radius: 8px; cursor: pointer; width: 100%;
+            transition: background-color 0.2s;
         }
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
         button:hover:not(:disabled) { background-color: #2980b9; }
         
-        /* 遊戲區塊設計 */
+        /* --- 遊戲區塊樣式 --- */
         #game-area { display: none; }
+        #turn-indicator {
+            font-size: 24px; margin-bottom: 20px;
+            color: #3498db;
+        }
         .board {
             display: grid;
-            grid-template-columns: repeat(3, 100px);
-            grid-template-rows: repeat(3, 100px);
-            gap: 5px;
-            justify-content: center;
-            margin: 20px auto;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+            aspect-ratio: 1 / 1; /* 保持正方形 */
         }
         .cell {
-            width: 100px; height: 100px;
             background-color: #ecf0f1;
-            border: 2px solid #bdc3c7;
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 0; /* 隱藏文字 */
+            cursor: pointer;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            position: relative; /* 為了特效定位 */
         }
+        .cell:hover { background-color: #dfe6e9; }
         .cell img {
-            width: 80%; height: 80%;
+            width: 85%; height: 85%;
             object-fit: cover; border-radius: 50%;
-            animation: popIn 0.3s ease-out;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         @keyframes popIn {
-            0% { transform: scale(0); }
-            100% { transform: scale(1); }
+            0% { transform: scale(0); opacity: 0;}
+            100% { transform: scale(1); opacity: 1;}
         }
-        #message { font-size: 20px; font-weight: bold; color: #e74c3c; margin: 15px 0; min-height: 24px;}
+        #message { font-size: 22px; font-weight: bold; color: #e74c3c; margin-bottom: 20px; min-height: 32px;}
+        button#restart-btn { background-color: #2ecc71; display: none; }
+        button#restart-btn:hover { background-color: #27ae60; }
+
+        /* --- ⭐️ 勝利特效樣式 ⭐️ --- */
+        /* 當格子是獲勝連線的一部分時增加這個 class */
+        .cell.winning-cell {
+            background-color: #fff3cd !important; /* 變成金色背景 */
+            border: 3px solid #f1c40f; /* 金色邊框 */
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.7) !important; /* 發光效果 */
+            transform: scale(1.05); /* 稍微放大突顯 */
+            z-index: 2; /* 讓它浮在最上面 */
+        }
     </style>
 </head>
 <body>
@@ -74,25 +125,35 @@
     <h1>頭像版圈圈叉叉</h1>
 
     <div id="setup-area">
-        <div class="upload-section">
-            <label>玩家一 (先手):</label>
-            <input type="file" id="p1-upload" accept="image/*">
-            <img id="p1-preview" class="preview-img" alt="玩家一預覽">
+        <div class="upload-group">
+            <div class="upload-card">
+                <label class="upload-label">玩家一 (先手)</label>
+                <label for="p1-upload" class="custom-file-upload">選擇圖片</label>
+                <input type="file" id="p1-upload" accept="image/*">
+                <div class="preview-img-box">
+                    <span class="placeholder-icon" id="p1-placeholder">👤</span>
+                    <img id="p1-preview" class="preview-img" alt="玩家一預覽">
+                </div>
+            </div>
+            <div class="upload-card">
+                <label class="upload-label">玩家二 (後手)</label>
+                <label for="p2-upload" class="custom-file-upload">選擇圖片</label>
+                <input type="file" id="p2-upload" accept="image/*">
+                <div class="preview-img-box">
+                    <span class="placeholder-icon" id="p2-placeholder">👤</span>
+                    <img id="p2-preview" class="preview-img" alt="玩家二預覽">
+                </div>
+            </div>
         </div>
-        <div class="upload-section">
-            <label>玩家二 (後手):</label>
-            <input type="file" id="p2-upload" accept="image/*">
-            <img id="p2-preview" class="preview-img" alt="玩家二預覽">
-        </div>
-        <button id="start-btn" disabled>上傳完畢，開始遊戲！</button>
+        <button id="start-btn" disabled>準備完成，開始對戰！</button>
     </div>
 
     <div id="game-area">
-        <h2 id="turn-indicator">換玩家一</h2>
+        <h2 id="turn-indicator">現在輪到：玩家一</h2>
         <div class="board" id="board">
             </div>
         <div id="message"></div>
-        <button id="restart-btn" style="display:none;">再玩一局</button>
+        <button id="restart-btn">再來一局！</button>
     </div>
 </div>
 
@@ -100,7 +161,8 @@
     let p1Img = null;
     let p2Img = null;
     let currentPlayer = 1;
-    let gameState = ["", "", "", "", "", "", "", "", ""];
+    // 儲存版面狀態，0為空，1為玩家一，2為玩家二
+    let gameState = [0, 0, 0, 0, 0, 0, 0, 0, 0];
     let gameActive = true;
 
     const winConditions = [
@@ -110,7 +172,7 @@
     ];
 
     // 處理圖片上傳
-    function setupUpload(inputId, previewId, playerNum) {
+    function setupUpload(inputId, previewId, placeholderId, playerNum) {
         document.getElementById(inputId).addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -118,14 +180,18 @@
                 reader.onload = function(event) {
                     const url = event.target.result;
                     const preview = document.getElementById(previewId);
+                    document.getElementById(placeholderId).style.display = 'none';
                     preview.src = url;
                     preview.style.display = 'block';
                     
                     if (playerNum === 1) p1Img = url;
                     if (playerNum === 2) p2Img = url;
 
+                    // 檢查是否兩張都上傳了
                     if (p1Img && p2Img) {
-                        document.getElementById('start-btn').disabled = false;
+                        const startBtn = document.getElementById('start-btn');
+                        startBtn.disabled = false;
+                        startBtn.style.animation = "popIn 0.5s"; // 加個小動畫提示可以點了
                     }
                 };
                 reader.readAsDataURL(file);
@@ -133,10 +199,10 @@
         });
     }
 
-    setupUpload('p1-upload', 'p1-preview', 1);
-    setupUpload('p2-upload', 'p2-preview', 2);
+    setupUpload('p1-upload', 'p1-preview', 'p1-placeholder', 1);
+    setupUpload('p2-upload', 'p2-preview', 'p2-placeholder', 2);
 
-    // 開始遊戲
+    // 開始遊戲按鈕
     document.getElementById('start-btn').addEventListener('click', () => {
         document.getElementById('setup-area').style.display = 'none';
         document.getElementById('game-area').style.display = 'block';
@@ -159,65 +225,88 @@
     // 點擊格子邏輯
     function handleCellClick(e) {
         const cell = e.target.closest('.cell');
-        const index = cell.dataset.index;
+        const index = parseInt(cell.dataset.index);
 
-        if (gameState[index] !== "" || !gameActive) return;
+        // 如果格子已經有棋子，或遊戲已結束，則不動作
+        if (gameState[index] !== 0 || !gameActive) return;
 
-        // 記錄狀態並顯示頭像
+        // 1. 更新狀態
         gameState[index] = currentPlayer;
+        
+        // 2. 顯示頭像
         const img = document.createElement('img');
         img.src = currentPlayer === 1 ? p1Img : p2Img;
         cell.appendChild(img);
 
+        // 3. 檢查勝負
         checkResult();
     }
 
     // 檢查勝負
     function checkResult() {
-        let roundWon = false;
+        let winningCombo = null; // 用來儲存獲勝的那三個索引位置
+
+        // 檢查所有獲勝條件
         for (let i = 0; i < winConditions.length; i++) {
             const [a, b, c] = winConditions[i];
+            // 檢查這三個位置是否都不是 0，且都相等
             if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
-                roundWon = true;
+                winningCombo = [a, b, c]; // 找到了獲勝組合
                 break;
             }
         }
 
         const messageEl = document.getElementById('message');
         const turnEl = document.getElementById('turn-indicator');
+        const restartBtn = document.getElementById('restart-btn');
 
-        if (roundWon) {
-            messageEl.innerText = `玩家 ${currentPlayer} 獲勝了！🎉`;
+        // 如果有人獲勝
+        if (winningCombo) {
+            // ⭐️ 觸發特效：把獲勝的那三個格子加上特殊類別 ⭐️
+            winningCombo.forEach(index => {
+                const winningCell = document.querySelector(`.cell[data-index='${index}']`);
+                winningCell.classList.add('winning-cell');
+            });
+
+            messageEl.innerHTML = `🎉 恭喜玩家 ${currentPlayer === 1 ? '一' : '二'} 獲勝！ 🎉`;
             turnEl.innerText = "遊戲結束";
+            turnEl.style.color = "#e74c3c";
             gameActive = false;
-            document.getElementById('restart-btn').style.display = 'block';
+            restartBtn.style.display = 'inline-block';
             return;
         }
 
-        if (!gameState.includes("")) {
-            messageEl.innerText = "平手！🤝";
+        // 檢查是否平手 (版面滿了但沒人贏)
+        if (!gameState.includes(0)) {
+            messageEl.innerText = "🤝 平分秋色，握手言和！ 🤝";
             turnEl.innerText = "遊戲結束";
+            turnEl.style.color = "#7f8c8d";
             gameActive = false;
-            document.getElementById('restart-btn').style.display = 'block';
+            restartBtn.style.display = 'inline-block';
             return;
         }
 
-        // 換人
+        // 換下一位玩家
         currentPlayer = currentPlayer === 1 ? 2 : 1;
-        turnEl.innerText = `換玩家 ${currentPlayer}`;
+        turnEl.innerText = `現在輪到：玩家 ${currentPlayer === 1 ? '一' : '二'}`;
     }
 
-    // 重新開始 (保留頭像)
+    // 重新開始 (保留頭像設定)
     document.getElementById('restart-btn').addEventListener('click', () => {
-        gameState = ["", "", "", "", "", "", "", "", ""];
+        gameState = [0, 0, 0, 0, 0, 0, 0, 0, 0];
         gameActive = true;
         currentPlayer = 1;
         document.getElementById('message').innerText = '';
-        document.getElementById('turn-indicator').innerText = '換玩家一';
+        const turnEl = document.getElementById('turn-indicator');
+        turnEl.innerText = '現在輪到：玩家一';
+        turnEl.style.color = "#3498db";
         document.getElementById('restart-btn').style.display = 'none';
         
-        document.querySelectorAll('.cell').forEach(cell => {
+        // 清空格子並移除勝利特效
+        const cells = document.querySelectorAll('.cell');
+        cells.forEach(cell => {
             cell.innerHTML = '';
+            cell.classList.remove('winning-cell'); // 記得移除特效類別
         });
     });
 </script>
