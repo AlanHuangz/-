@@ -80,9 +80,10 @@
         .board {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr); /* 🌟 新增這行：強制三排高度均分 */
             gap: 10px;
             margin-bottom: 25px;
-            aspect-ratio: 1 / 1; /* 保持正方形 */
+            aspect-ratio: 1 / 1; 
         }
         .cell {
             background-color: #ecf0f1;
@@ -91,8 +92,11 @@
             cursor: pointer;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
-            position: relative; /* 為了特效定位 */
+            position: relative;
+            aspect-ratio: 1 / 1; /* 🌟 新增這行：強制每個獨立的格子都必須是正方形 */
+            min-height: 0; /* 🌟 新增這行：防止內容物無視網格限制把版面撐開 */
         }
+
         .cell:hover { background-color: #dfe6e9; }
         .cell img {
             width: 85%; height: 85%;
